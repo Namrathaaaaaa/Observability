@@ -5,6 +5,7 @@
 ArgoCD continuously monitors and synchronizes the desired state (Git) with actual state (Kubernetes cluster).
 
 ### How it works:
+
 - **Poll Interval**: Default 3 minutes, configurable
 - **Drift Detection**: Compares Git manifest with live cluster state
 - **Auto-sync**: Automatically applies changes when enabled
@@ -22,7 +23,7 @@ spec:
       prune: true
       selfHeal: true
     syncOptions:
-    - CreateNamespace=true
+      - CreateNamespace=true
 ```
 
 ## 2. GitHub Webhooks
@@ -30,6 +31,7 @@ spec:
 Webhooks enable real-time synchronization instead of waiting for polling intervals.
 
 ### Setup:
+
 1. **Configure webhook in GitHub repository**
 2. **Point to ArgoCD webhook endpoint**
 3. **Use shared secret for security**
@@ -46,6 +48,7 @@ Events: push, pull_request
 ```
 
 ### ArgoCD Configuration:
+
 ```yaml
 # argocd-server configmap
 apiVersion: v1
@@ -61,6 +64,7 @@ data:
 Define custom health assessments for resources ArgoCD doesn't natively understand.
 
 ### Example - Custom CRD Health Check:
+
 ```lua
 -- healthcheck.lua
 health_status = {}
@@ -69,7 +73,7 @@ if obj.status ~= nil then
     health_status.status = "Healthy"
     health_status.message = "Custom resource is running"
   elseif obj.status.phase == "Failed" then
-    health_status.status = "Degraded" 
+    health_status.status = "Degraded"
     health_status.message = obj.status.message
   else
     health_status.status = "Progressing"
@@ -80,6 +84,7 @@ return health_status
 ```
 
 ### ConfigMap for Custom Health:
+
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -103,20 +108,22 @@ data:
 Different approaches to synchronize applications.
 
 ### Sync Options:
+
 ```yaml
 spec:
   syncPolicy:
     syncOptions:
-    - CreateNamespace=true        # Create namespace if missing
-    - PrunePropagationPolicy=foreground  # Deletion order
-    - PruneLast=true             # Prune after sync
-    - RespectIgnoreDifferences=true      # Honor ignore rules
-    - ApplyOutOfSyncOnly=true    # Only sync out-of-sync resources
+      - CreateNamespace=true # Create namespace if missing
+      - PrunePropagationPolicy=foreground # Deletion order
+      - PruneLast=true # Prune after sync
+      - RespectIgnoreDifferences=true # Honor ignore rules
+      - ApplyOutOfSyncOnly=true # Only sync out-of-sync resources
 ```
 
 ### Sync Phases:
+
 1. **PreSync**: Jobs that run before sync (DB migrations)
-2. **Sync**: Main application deployment  
+2. **Sync**: Main application deployment
 3. **PostSync**: Jobs that run after sync (tests, notifications)
 
 ```yaml
@@ -132,49 +139,60 @@ spec:
   template:
     spec:
       containers:
-      - name: migrate
-        image: migrate/migrate
-        command: ["migrate", "-path", "/migrations", "-database", "postgres://...", "up"]
+        - name: migrate
+          image: migrate/migrate
+          command:
+            [
+              "migrate",
+              "-path",
+              "/migrations",
+              "-database",
+              "postgres://...",
+              "up",
+            ]
       restartPolicy: Never
 ```
 
 ### Sync Windows:
+
 ```yaml
 # Restrict sync to maintenance windows
 spec:
   syncPolicy:
     syncOptions:
-    - SkipDryRunOnMissingResource=true
+      - SkipDryRunOnMissingResource=true
   syncWindows:
-  - kind: allow
-    schedule: "0 2 * * 1-5"  # 2 AM, Mon-Fri
-    duration: 1h
-    applications:
-    - "*"
+    - kind: allow
+      schedule: "0 2 * * 1-5" # 2 AM, Mon-Fri
+      duration: 1h
+      applications:
+        - "*"
 ```
 
 ## 5. Pruning and Self-Healing
 
 ### Pruning:
+
 Removes resources that exist in cluster but not in Git.
 
 ```yaml
 spec:
   syncPolicy:
     automated:
-      prune: true  # Enable automatic pruning
+      prune: true # Enable automatic pruning
     syncOptions:
-    - PruneLast=true  # Prune after successful sync
+      - PruneLast=true # Prune after successful sync
 ```
 
 ### Self-Healing:
+
 Reverts manual changes to match Git state.
 
 ```yaml
 spec:
   syncPolicy:
     automated:
-      selfHeal: true  # Enable self-healing
+      selfHeal: true # Enable self-healing
     retry:
       limit: 3
       backoff:
@@ -184,6 +202,7 @@ spec:
 ```
 
 ### Example with both enabled:
+
 ```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -206,6 +225,7 @@ spec:
 ArgoCD natively supports Helm charts with GitOps workflow.
 
 ### Direct Helm Chart:
+
 ```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -218,10 +238,10 @@ spec:
     targetRevision: 4.7.1
     helm:
       parameters:
-      - name: controller.service.type
-        value: LoadBalancer
-      - name: controller.metrics.enabled
-        value: "true"
+        - name: controller.service.type
+          value: LoadBalancer
+        - name: controller.metrics.enabled
+          value: "true"
       values: |
         controller:
           replicas: 2
@@ -232,6 +252,7 @@ spec:
 ```
 
 ### Helm Chart from Git:
+
 ```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -244,13 +265,14 @@ spec:
     targetRevision: HEAD
     helm:
       valueFiles:
-      - values-prod.yaml
+        - values-prod.yaml
       parameters:
-      - name: image.tag
-        value: v1.2.3
+        - name: image.tag
+          value: v1.2.3
 ```
 
 ### Helm Hooks with ArgoCD:
+
 ```yaml
 # Pre-install job
 apiVersion: batch/v1
@@ -264,9 +286,9 @@ spec:
   template:
     spec:
       containers:
-      - name: setup
-        image: busybox
-        command: ["sh", "-c", "echo 'Setting up environment'"]
+        - name: setup
+          image: busybox
+          command: ["sh", "-c", "echo 'Setting up environment'"]
       restartPolicy: Never
 ```
 
@@ -275,6 +297,7 @@ spec:
 Manage applications across multiple Kubernetes clusters.
 
 ### Add External Cluster:
+
 ```bash
 # Login to ArgoCD
 argocd login argocd-server.example.com
@@ -282,11 +305,12 @@ argocd login argocd-server.example.com
 # Add cluster
 argocd cluster add prod-cluster-context --name production
 
-# List clusters  
+# List clusters
 argocd cluster list
 ```
 
 ### Multi-Cluster Application:
+
 ```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -304,6 +328,7 @@ spec:
 ```
 
 ### ApplicationSet for Multi-Cluster:
+
 ```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
@@ -311,20 +336,20 @@ metadata:
   name: multi-cluster-apps
 spec:
   generators:
-  - clusters:
-      selector:
-        matchLabels:
-          environment: production
+    - clusters:
+        selector:
+          matchLabels:
+            environment: production
   template:
     metadata:
-      name: '{{name}}-web-app'
+      name: "{{name}}-web-app"
     spec:
       destination:
-        server: '{{server}}'
+        server: "{{server}}"
         namespace: web-app
       source:
         repoURL: https://github.com/myorg/web-app
-        path: 'k8s/overlays/{{metadata.labels.environment}}'
+        path: "k8s/overlays/{{metadata.labels.environment}}"
         targetRevision: HEAD
       syncPolicy:
         automated:
@@ -333,6 +358,7 @@ spec:
 ```
 
 ### Cluster Configuration with Labels:
+
 ```bash
 # Add cluster with labels
 argocd cluster add staging-context \
